@@ -31,7 +31,8 @@ void action() {
       mySerial.print('C');
       mySerial.print('0');
       mySerial.print('D');
-      mySerial.print('\n');
+      mySerial.print('\r');
+      mySerial.print('\n'); 
     }
   } 
   else {
@@ -42,7 +43,8 @@ void action() {
       mySerial.print('C');
       mySerial.print('0');
       mySerial.print('E');
-      mySerial.print('\n');
+      mySerial.print('\r');
+            mySerial.print('\n'); 
     }
   }
 
@@ -55,7 +57,9 @@ void action() {
       mySerial.print('C');
       mySerial.print('0');
       mySerial.print('0');
-      mySerial.print('\n');
+      mySerial.print('\r');
+            mySerial.print('\n'); 
+
     }
   } 
   else {
@@ -70,7 +74,7 @@ void action() {
       mySerial.print('C');
       mySerial.print('0');
       mySerial.print('1');
-      mySerial.print('\n');
+      mySerial.print('\r');
     }
   }
   else {

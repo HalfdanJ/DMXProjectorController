@@ -2,6 +2,8 @@
  * DMXProjectorController                                   *
  * Developed by HalfdanJ.dk                                 *
  ************************************************************/
+ 
+// Compile error? http://doityourselfchristmas.com/forums/showthread.php?20062-arduino-on-WIFI-with-vixen-drivers-for-g35-lights/page3
 
 #include <SoftwareSerial.h>
 #include "EEPROM.h"
@@ -10,6 +12,7 @@
 #define SerialRxPin 8
 #define SerialTxPin 9
 #define ledPin 6
+#define ledPin2 7
 
 //LED Status
 int receiveDmxTimeout = 0;
@@ -70,6 +73,7 @@ void setup() {
   pinMode(SerialRxPin, INPUT);
   pinMode(SerialTxPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
   pinMode(6, OUTPUT);
   mySerial.begin(9600);
 
@@ -160,7 +164,8 @@ void loop()  {
       else {
         blinkState = true;
       }
-      digitalWrite(ledPin,blinkState);   
+      digitalWrite(ledPin2,blinkState);   
+      digitalWrite(ledPin,0);   
       if(fastBlink){
         receiveDmxBlinkTimer = 12000;  
       } 
@@ -171,6 +176,7 @@ void loop()  {
   } 
   else {
     blinkState = true;
+    digitalWrite(ledPin2,0);
     digitalWrite(ledPin,blinkState);
   }
 } //end loop()
