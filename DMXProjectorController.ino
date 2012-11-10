@@ -2,8 +2,9 @@
  * DMXProjectorController                                   *
  * Developed by HalfdanJ.dk                                 *
  ************************************************************/
- 
-// Compile error? http://doityourselfchristmas.com/forums/showthread.php?20062-arduino-on-WIFI-with-vixen-drivers-for-g35-lights/page3
+
+// Compile error? http://doityourselfchristmas.com/forums/showthread.php?20062-arduino-on-WIFI-with-vixen-drivers-for-g35-lights/page
+
 
 #include <SoftwareSerial.h>
 #include "EEPROM.h"
@@ -14,9 +15,11 @@
 #define ledPin 6
 #define ledPin2 7
 
+boolean lock = 0;
+
 //LED Status
 int receiveDmxTimeout = 0;
-int receiveDmxBlinkTimer = 0;
+long long receiveDmxBlinkTimer = 0;
 boolean blinkState = false;
 boolean fastBlink = false;
 
@@ -30,7 +33,7 @@ boolean lastOffSend = false;
 SoftwareSerial mySerial =  SoftwareSerial(SerialRxPin, SerialTxPin);
 
 //DMX Setup
-#define NUMBER_OF_CHANNELS 255 //512
+#define NUMBER_OF_CHANNELS 3 //512
 
 #define SWITCH_PIN_0 11 //the pin number of our "0" switch
 #define SWITCH_PIN_1 12 //the pin number of our "1" switch
@@ -53,10 +56,10 @@ unsigned int dmxaddress = 1;
 
 
 //DMX variable declarations
-volatile byte i = 0;              //dummy variable for dmxvalue[]
+volatile unsigned int i = 0;              //dummy variable for dmxvalue[]
 volatile byte dmxreceived = 0;    //the latest received value
 volatile unsigned int dmxcurrent = 0;     //counter variable that is incremented every time we receive a value.
-volatile byte dmxvalue[NUMBER_OF_CHANNELS];
+volatile byte dmxvalue[NUMBER_OF_CHANNELS+1];
 /*  stores the DMX values we're interested in using--
  *  keep in mind that this is 0-indexed. */
 volatile boolean dmxnewvalue = false;
@@ -100,55 +103,69 @@ void setup() {
   digitalWrite(SWITCH_PIN_0, HIGH);       //turns on the internal pull-up resistor for '0' switch pin
   pinMode(SWITCH_PIN_1, INPUT);           //sets pin for '1' switch to input
   digitalWrite(SWITCH_PIN_1, HIGH);       //turns on the internal pull-up resistor for '1' switch pin
+  /*
+  // USART configuration 
+   
+   Serial.begin(250000);
+   // Each bit is 4uS long, hence 250Kbps baud rate 
+   
+   cli(); //disable interrupts while we're setting bits in registers
+   
+   bitClear(UCSR0B, RXCIE0);  //disable USART reception interrupt
+   
+   // Timer2 configuration
+   
+   //NOTE:  this will disable PWM on pins 3 and 11.
+   bitClear(TCCR2A, COM2A1);
+   bitClear(TCCR2A, COM2A0); //disable compare match output A mode
+   bitClear(TCCR2A, COM2B1);
+   bitClear(TCCR2A, COM2B0); //disable compare match output B mode
+   bitSet(TCCR2A, WGM21);
+   bitClear(TCCR2A, WGM20);  //set mode 2, CTC.  TOP will be set by OCRA.
+   
+   bitClear(TCCR2B, FOC2A);
+   bitClear(TCCR2B, FOC2B);  //disable Force Output Compare A and B.
+   bitClear(TCCR2B, WGM22);  //set mode 2, CTC.  TOP will be set by OCRA.
+   bitClear(TCCR2B, CS22);
+   bitClear(TCCR2B, CS21);
+   bitSet(TCCR2B, CS20);   // no prescaler means the clock will increment every 62.5ns (assuming 16Mhz clock speed).
+   
+   OCR2A = 64;
+   // Set output compare register to 64, so that the Output Compare Interrupt will fire  every 4uS. 
+   
+   bitClear(TIMSK2, OCIE2B);  //Disable Timer/Counter2 Output Compare Match B Interrupt
+   bitSet(TIMSK2, OCIE2A);    //Enable Timer/Counter2 Output Compare Match A Interrupt
+   bitClear(TIMSK2, TOIE2);   //Disable Timer/Counter2 Overflow Interrupt Enable          
+   
+   sei();                     //reenable interrupts now that timer2 has been configured. 
+   
+   */
 
-  /******************************* USART configuration ************************************/
+  // initialize UART for DMX 
+  // this will be 250 kbps, 8 bits, no parity, 2 stop bits 
+  //  UCSR0C |= (1<<USBS0); 
 
-  Serial.begin(250000);
-  /* Each bit is 4uS long, hence 250Kbps baud rate */
+  UCSR0C = (1<<USBS0)|(3<<UCSZ00);
 
-  cli(); //disable interrupts while we're setting bits in registers
+  Serial.begin(250000); 
 
-  bitClear(UCSR0B, RXCIE0);  //disable USART reception interrupt
 
-  /******************************* Timer2 configuration ***********************************/
-
-  //NOTE:  this will disable PWM on pins 3 and 11.
-  bitClear(TCCR2A, COM2A1);
-  bitClear(TCCR2A, COM2A0); //disable compare match output A mode
-  bitClear(TCCR2A, COM2B1);
-  bitClear(TCCR2A, COM2B0); //disable compare match output B mode
-  bitSet(TCCR2A, WGM21);
-  bitClear(TCCR2A, WGM20);  //set mode 2, CTC.  TOP will be set by OCRA.
-
-  bitClear(TCCR2B, FOC2A);
-  bitClear(TCCR2B, FOC2B);  //disable Force Output Compare A and B.
-  bitClear(TCCR2B, WGM22);  //set mode 2, CTC.  TOP will be set by OCRA.
-  bitClear(TCCR2B, CS22);
-  bitClear(TCCR2B, CS21);
-  bitSet(TCCR2B, CS20);   // no prescaler means the clock will increment every 62.5ns (assuming 16Mhz clock speed).
-
-  OCR2A = 64;
-  /* Set output compare register to 64, so that the Output Compare Interrupt will fire
-   *  every 4uS.  */
-
-  bitClear(TIMSK2, OCIE2B);  //Disable Timer/Counter2 Output Compare Match B Interrupt
-  bitSet(TIMSK2, OCIE2A);    //Enable Timer/Counter2 Output Compare Match A Interrupt
-  bitClear(TIMSK2, TOIE2);   //Disable Timer/Counter2 Overflow Interrupt Enable          
-
-  sei();                     //reenable interrupts now that timer2 has been configured. 
 
 }  //end setup()
 
 void loop()  {
   // the processor gets parked here while the ISRs are doing their thing. 
+  //mySerial.print('b');
 
   if (dmxnewvalue == 1) {    //when a new set of values are received, jump to action loop...
     action(); //Here is the fun!
+
+
     dmxnewvalue = 0;
-    dmxcurrent = 0;
-    zerocounter = 0;      //and then when finished reset variables and enable timer2 interrupt
-    i = 0;
-    bitSet(TIMSK2, OCIE2A);    //Enable Timer/Counter2 Output Compare Match A Interrupt
+    /*    dmxcurrent = 0;
+     zerocounter = 0;      //and then when finished reset variables and enable timer2 interrupt
+     i = 0;*/
+    // bitSet(TIMSK2, OCIE2A);    //Enable Timer/Counter2 Output Compare Match A Interrupt
   }
 
   //As long as DMX is received blink quickly, if command blink slowly
@@ -164,10 +181,10 @@ void loop()  {
       else {
         blinkState = true;
       }
-      digitalWrite(ledPin2,blinkState);   
-      digitalWrite(ledPin,0);   
+        digitalWrite(ledPin2,blinkState);   
+        analogWrite(ledPin,120*blinkState*fastBlink);   
       if(fastBlink){
-        receiveDmxBlinkTimer = 12000;  
+        receiveDmxBlinkTimer = 22000;  
       } 
       else { 
         receiveDmxBlinkTimer = 32000;  
@@ -176,40 +193,167 @@ void loop()  {
   } 
   else {
     blinkState = true;
-    digitalWrite(ledPin2,0);
-    digitalWrite(ledPin,blinkState);
+      digitalWrite(ledPin2,0);
+     digitalWrite(ledPin,blinkState);
+     
   }
+
+
 } //end loop()
 
 //Timer2 compare match interrupt vector handler
-ISR(TIMER2_COMPA_vect) {
-  if (bitRead(PIND, PIND0)) {  // if a one is detected, we're not in a break, reset zerocounter.
-    zerocounter = 0;
-  }
-  else {
-    zerocounter++;             // increment zerocounter if a zero is received.
-    if (zerocounter == 20)     // if 20 0's are received in a row (80uS break)
-    {
-      bitClear(TIMSK2, OCIE2A);    //disable this interrupt and enable reception interrupt now that we're in a break.
-      bitSet(UCSR0B, RXCIE0);
-    }
-  }
-} //end Timer2 ISR
+/*
 
+ ISR(TIMER2_COMPA_vect) {
+ digitalWrite(ledPin2,LOW);   
+ if (bitRead(PIND, PIND0)) {  // if a one is detected, we're not in a break, reset zerocounter.
+ zerocounter = 0;
+ }
+ else {
+ zerocounter++;             // increment zerocounter if a zero is received.
+ if (zerocounter == 20)     // if 20 0's are received in a row (80uS break)
+ {
+ bitClear(TIMSK2, OCIE2A);    //disable this interrupt and enable reception interrupt now that we're in a break.
+ bitSet(UCSR0B, RXCIE0);
+ digitalWrite(ledPin2,HIGH);   
+ }
+ }
+ } //end Timer2 ISR
+ 
+ */
+
+
+/*
 ISR(USART_RX_vect){
-  dmxreceived = UDR0;
-  dmxcurrent++;                        //increment address counter
+ 
+ dmxreceived = UDR0;
+ dmxcurrent++;                        //increment address counter
+ 
+ mySerial.print(dmxcurrent);
+ mySerial.print('\n');
+/* if(dmxcurrent == 1){
+ mySerial.print(dmxreceived); 
+ }
+ if(dmxcurrent > dmxaddress) {         //check if the current address is the one we want.
+ 
+ int diff = dmxcurrent + 1 - readAddress();
+ if(diff >= 0 && diff < NUMBER_OF_CHANNELS){
+ dmxvalue[diff] = dmxreceived;
+ //digitalWrite(ledPin2,HIGH);   
+ 
+ }
+ i++;
+ //zuuuuuuuuu6aaaaaaaauaaaaaauuxsuxssssuxus$$$$$$$$$jx1jiiiiiiiiiiiii0 mySerial.println(i);
+ if(i == 511) {
+ bitClear(UCSR0B, RXCIE0);
+ dmxnewvalue = 1;                        //set newvalue, so that the main code can be executed.
+ //digitalWrite(ledPin2,LOW);   
+ 
+ }
+ }
+ */
 
-  if(dmxcurrent > dmxaddress) {         //check if the current address is the one we want.
-    dmxvalue[i] = dmxreceived;
-    i++;
-     //zuuuuuuuuu6aaaaaaaauaaaaaauuxsuxssssuxus$$$$$$$$$jx1jiiiiiiiiiiiii0 mySerial.println(i);
-    if(i == NUMBER_OF_CHANNELS) {
-      bitClear(UCSR0B, RXCIE0);
-      dmxnewvalue = 1;                        //set newvalue, so that the main code can be executed.
-    }
-  }
-} // end ISR
+/*  if(dmxcurrent == 512 ) {
+ bitClear(UCSR0B, RXCIE0);
+ dmxnewvalue = 1;                        //set newvalue, so that the main code can be executed.
+ //digitalWrite(ledPin2,LOW);   
+ 
+ }
+ 
+ } // end ISR
+ */
+
+
+enum 
+{ 
+  DMX_IDLE, 
+  DMX_BREAK, 
+  DMX_START, 
+  DMX_RUN 
+}; 
+
+volatile unsigned char dmx_state = DMX_IDLE; 
+
+
+// this is the current address of the dmx frame 
+unsigned int dmx_addr; 
+
+// this is used to keep track of the channels 
+unsigned int chan_cnt; 
+
+// tell us when to update the pins 
+volatile unsigned char update = 0; 
+
+ISR(USART_RX_vect) 
+{ 
+
+  unsigned char status = UCSR0A; 
+  unsigned char data = UDR0; 
+
+  switch (dmx_state) 
+  { 
+  case DMX_IDLE: 
+    if (status & (1<<FE0)) 
+    { 
+      if(!lock){
+        dmx_addr = 0; 
+        dmx_state = DMX_BREAK; 
+        update = 1; 
+        //     digitalWrite(ledPin2,HIGH);   
+      }
+    } 
+    break; 
+
+  case DMX_BREAK: 
+
+    if (data == 0) 
+    { 
+
+      dmx_state = DMX_START; 
+      //     digitalWrite(ledPin2,LOW);   
+
+    } 
+    else 
+    { 
+      dmx_state = DMX_IDLE; 
+    } 
+    break; 
+
+  case DMX_START: 
+    dmx_addr++; 
+    if (dmx_addr == readAddress()) 
+    { 
+      //   digitalWrite(ledPin2,HIGH);   
+      chan_cnt = 0; 
+      dmxvalue[chan_cnt++] = data; 
+      dmx_state = DMX_RUN; 
+    } 
+    break; 
+
+  case DMX_RUN: 
+    dmxvalue[chan_cnt++] = data; 
+    if (chan_cnt >= NUMBER_OF_CHANNELS) 
+    { 
+      dmx_state = DMX_IDLE; 
+      //     digitalWrite(ledPin2,LOW);   
+      dmxnewvalue = 1;
+
+    } 
+    break; 
+
+  default: 
+    dmx_state = DMX_IDLE; 
+    break; 
+  } 
+} 
+
+
+
+
+
+
+
+
 
 
 

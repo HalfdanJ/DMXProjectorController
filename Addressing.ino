@@ -25,6 +25,8 @@ int rotaryRead(int rot){
 }
 
 int readAddress(){
-  return rotaryRead(2) + 10*rotaryRead(1) + 100*rotaryRead(0) ;
+ // return rotaryRead(2) + 10*rotaryRead(1) + 100*rotaryRead(0) ;
+// return 490;
+return 490;
 }
 

@@ -1,4 +1,5 @@
 void action() { 
+  lock = true;
 
   receiveDmxTimeout = 32000;
   /*********** Put what you want the code to do with the values (dmxvalue) here *************
@@ -22,7 +23,7 @@ void action() {
    mySerial.print(" \n ");*/
   fastBlink = false;
 
-  if(dmxvalue[2+readAddress()] > 127) {
+  if(dmxvalue[0] > 127) {
     fastBlink = true;
     if(lastShutterSend == false){
       lastShutterSend = true;
@@ -44,11 +45,11 @@ void action() {
       mySerial.print('0');
       mySerial.print('E');
       mySerial.print('\r');
-            mySerial.print('\n'); 
+      mySerial.print('\n'); 
     }
   }
 
-  if(dmxvalue[2+readAddress()+1] > 127) {
+  if(dmxvalue[1] > 127) {
     fastBlink = true;
     if(lastOnSend == false){
       lastOnSend = true;
@@ -58,14 +59,14 @@ void action() {
       mySerial.print('0');
       mySerial.print('0');
       mySerial.print('\r');
-            mySerial.print('\n'); 
+      mySerial.print('\n'); 
 
     }
   } 
   else {
     lastOnSend = false;
   }
-  if(dmxvalue[2+readAddress()+2] > 127) {
+  if(dmxvalue[2] > 127) {
     fastBlink = true;
     if(lastOffSend == false){
       lastOffSend = true;
@@ -75,6 +76,7 @@ void action() {
       mySerial.print('0');
       mySerial.print('1');
       mySerial.print('\r');
+      mySerial.print('\n'); 
     }
   }
   else {
@@ -82,10 +84,14 @@ void action() {
   }
 
 
-
+  lock = false;
 
   return;  //go back to loop()
 } //end action() loop
+
+
+
+
 
 
 
