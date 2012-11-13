@@ -2,25 +2,9 @@ void action() {
   lock = true;
 
   receiveDmxTimeout = 32000;
-  /*********** Put what you want the code to do with the values (dmxvalue) here *************
-   * example code: print out the received values to the serial port, and set PWM pins 5 and 6 
-   to the first two values received.  You can take this code out and put your own in.*/
 
-  //begin example code
 
-  //analogWrite(6,400);
-  /* analogWrite(5, dmxvalue[0]);
-   analogWrite(6, dmxvalue[1]);*/
-  //end example code
-  /*
-  mySerial.print(readAddress());
-   mySerial.print("  ");
-   mySerial.print(dmxvalue[2+readAddress()]);
-   mySerial.print("  ");
-   mySerial.print(dmxvalue[2+readAddress()+1]);
-   mySerial.print("  ");
-   mySerial.print(dmxvalue[2+readAddress()+2]);
-   mySerial.print(" \n ");*/
+
   fastBlink = false;
 
   if(dmxvalue[0] > 127) {
