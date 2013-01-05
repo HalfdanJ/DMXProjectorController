@@ -3,7 +3,10 @@
  * Developed by HalfdanJ.dk                                 *
  ************************************************************/
 
-// Compile error? http://doityourselfchristmas.com/forums/showthread.php?20062-arduino-on-WIFI-with-vixen-drivers-for-g35-lights/page
+/* Compile error? http://doityourselfchristmas.com/forums/showthread.php?20062-arduino-on-WIFI-with-vixen-drivers-for-g35-lights/page
+ The file that has to be edited is the hardware/arduino/cores/arduino/HardwareSerial.cpp
+ Basically you have to comment out from just after the store_char procedure until just before the serialEventRun procedure.
+ */
 
 
 #include <SoftwareSerial.h>
@@ -67,7 +70,8 @@ void setup() {
   pinMode(SerialTxPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   pinMode(ledPin2, OUTPUT);
-  pinMode(6, OUTPUT);
+
+  pinMode(5, OUTPUT);
   mySerial.begin(9600);
 
   pinMode(14, OUTPUT);
@@ -111,11 +115,14 @@ void setup() {
 
 
 void loop()  {
+
+  
   if (dmxnewvalue == 1) {    //when a new set of values are received, jump to action loop...
     action(); //Here is the fun!
 
     dmxnewvalue = 0;
   }
+
 
   //As long as DMX is received blink quickly, if command blink slowly
   if(receiveDmxTimeout > 0){
@@ -124,6 +131,9 @@ void loop()  {
     receiveDmxBlinkTimer --;
 
     if(receiveDmxBlinkTimer < 0){
+      
+
+      
       if(blinkState){
         blinkState = false;
       } 
@@ -182,6 +192,7 @@ ISR(USART_RX_vect)
   case DMX_IDLE: 
     if (status & (1<<FE0)) 
     { 
+
       if(!lock){
         dmx_addr = 0; 
         dmx_state = DMX_BREAK; 
@@ -197,6 +208,7 @@ ISR(USART_RX_vect)
     { 
 
       dmx_state = DMX_START; 
+
       //     digitalWrite(ledPin2,LOW);   
 
     } 
@@ -232,7 +244,10 @@ ISR(USART_RX_vect)
     dmx_state = DMX_IDLE; 
     break; 
   } 
+
+
 } 
+
 
 
 

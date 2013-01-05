@@ -19,7 +19,8 @@ int rotaryRead(int rot){
   int b3 = (readMux(val+2)> 500)?0 : 1;
   int b4 = (readMux(val+3)> 500)?0 : 1;
 
-  return b1*4 + b2*8 + b3 + b4*2;
+   //return b1 + b2*2 + b3*4 + b4*8; //V2
+  return b1*4 + b2*8 + b3 + b4*2; // V1
 }
 
 int readAddress(){
